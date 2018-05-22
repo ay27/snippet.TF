@@ -4,9 +4,15 @@
 import tensorflow as tf
 import numpy as np
 import utils
+import pickle
+import os
 utils.set_best_gpu()
 
-W = np.random.rand(20, 100) * 10.0
+if os.path.isfile("W.npy"):
+    W = pickle.load(open("W.npy", "rb"))
+else:
+    W = np.random.rand(20, 100) * 10.0
+    pickle.dump(W, open("W.npy", "wb"))
 
 
 def read_from_numpy(num_epochs, batch_size, shuffle=True, name=None):
@@ -28,7 +34,7 @@ def read_from_numpy(num_epochs, batch_size, shuffle=True, name=None):
             lambda x, y: (x + tf.random_uniform(x.get_shape(), minval=0, maxval=0.02, dtype=tf.float32), y),
             num_parallel_calls=4)
         if shuffle:
-            dataset.shuffle(buffer_size=1000)
+            dataset = dataset.shuffle(buffer_size=1000)
         dataset = dataset.batch(batch_size)
         dataset = dataset.repeat(num_epochs)
         dataset = dataset.prefetch(buffer_size=1000)
@@ -60,7 +66,7 @@ def read_from_generator(num_epochs, batch_size, shuffle=False, name=None):
             lambda x, y: (x + tf.random_uniform(tf.shape(x), minval=0, maxval=0.02, dtype=tf.float32), y),
             num_parallel_calls=4)
         if shuffle:
-            dataset.shuffle(buffer_size=1000)
+            dataset = dataset.shuffle(buffer_size=1000)
         dataset = dataset.batch(batch_size)
         dataset = dataset.repeat(num_epochs)
         dataset = dataset.prefetch(buffer_size=1000)
