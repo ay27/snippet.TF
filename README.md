@@ -1,6 +1,6 @@
 # Snippet.TF
 
-Some of my snippets used in TensorFlow, maybe helpful for someone.
+Some of my snippets used in TensorFlow, maybe helpful to someone.
 
 Usage:
 
