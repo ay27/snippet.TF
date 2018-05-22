@@ -40,13 +40,18 @@ def run_epoch(sess, model, iterations, eval_op=None):
 
 
 def main(_):
-    X, Y, iterations = read_from_numpy(config.epochs*2, config.batch_size)
+    X, Y, iterations = read_from_numpy(config.epochs * 2, config.batch_size)
     test_X, test_Y, iterations = read_from_numpy(config.epochs, config.batch_size)
+
+    lr = tf.Variable(config.lr, trainable=False)
+    lr = tf.train.exponential_decay(lr, tf.train.get_or_create_global_step(), config.lr_decay_interval * iterations,
+                                    config.lr_decay,
+                                    staircase=True, name="lr")
     train_model = LrModel(X, Y, lr=config.lr, is_training=True, reuse=False)
     test_model = LrModel(X, Y, is_training=False, reuse=True)
 
     logger = Logger(FLAGS.log_path)
-    csv_logger = CSVLogger(os.path.join(FLAGS.log_path, "log.csv"), ["epoch", "Train Loss", "Valid Loss"])
+    csv_logger = CSVLogger(os.path.join(FLAGS.log_path, "log.csv"), ["epoch", "Lr", "Train Loss", "Valid Loss"])
 
     saver = tf.train.Saver()
     init = tf.global_variables_initializer()
@@ -57,12 +62,14 @@ def main(_):
     for epoch in range(config.epochs):
         train_loss = run_epoch(sess, train_model, iterations, train_model.train_op)
         valid_loss = run_epoch(sess, test_model, iterations)
-        csv_logger.log(epoch, train_loss, valid_loss)
+        lr_val = sess.run(lr)
+        csv_logger.log(epoch, lr_val, train_loss, valid_loss)
         logger.scalar_summary("Train Loss", train_loss, epoch)
         logger.scalar_summary("Valid Loss", valid_loss, epoch)
+        logger.scalar_summary("Lr", lr_val, epoch)
 
-        print("-"*90)
-        print("Train Loss = %.3f, Valid Loss = %.3f" % (train_loss, valid_loss))
+        print("-" * 90)
+        print("Epoch:%d Lr: %.6f Train Loss = %.3f, Valid Loss = %.3f" % (epoch, lr_val, train_loss, valid_loss))
     saver.save(sess, os.path.join(FLAGS.model_save_path, "model.ckpt"))
 
 
