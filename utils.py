@@ -7,6 +7,9 @@ import numpy as np
 
 
 class Average(object):
+    """
+    Full Average without saving.
+    """
     def __init__(self):
         super().__init__()
         self._val = 0.0
@@ -26,6 +29,14 @@ class Average(object):
 
 class MovingMean(object):
     def __init__(self, N=100):
+        """
+        Moving Mean (Average) for a fix length N.
+
+        Parameters
+        ----------
+        N: int
+            moving length
+        """
         super().__init__()
         self._N = N
         self._log = np.zeros(self._N, dtype=np.float32)

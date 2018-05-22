@@ -34,7 +34,14 @@ def main(_):
     ckpt = tf.train.get_checkpoint_state("./save/")
     if ckpt and ckpt.model_checkpoint_path:
         saver.restore(sess, ckpt.model_checkpoint_path)
+
+    # restore the whole model and test it
     print(run_epoch(sess, test_model, iterations))
+
+    # or we can obtain some special tensor to process
+    W = tf.get_default_graph().get_tensor_by_name("LR-Model/Weight:0")
+    W = sess.run(W)
+    print(W.shape)
 
 
 if __name__ == '__main__':
