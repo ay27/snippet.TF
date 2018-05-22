@@ -5,20 +5,16 @@ import tensorflow as tf
 from reader import read_from_numpy, read_from_generator
 from model import LrModel
 import utils
+
 utils.set_best_gpu()
 utils.set_seed(1234)
 
 
-def run_epoch(sess, model, iterations, eval_op=None):
+def run_epoch(sess, model, iterations):
     loss = utils.MovingMean()
-    fetch_ops = {
-        "loss": model.loss,
-    }
-    if eval_op is not None:
-        fetch_ops["eval_op"] = eval_op
     for _ in range(iterations):
-        vals = sess.run(fetch_ops)
-        loss.move(vals["loss"])
+        loss_val = sess.run(model.loss)
+        loss.move(loss_val)
     return loss
 
 

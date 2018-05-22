@@ -4,13 +4,14 @@
 import tensorflow as tf
 import numpy as np
 
+W = np.random.rand(20, 100) * 10.0
+
 
 def read_from_numpy(num_epochs, batch_size, name=None):
     # refer to https://www.tensorflow.org/programmers_guide/datasets for more detail!
 
     num_examples = 1000
     X = np.random.rand(num_examples, 20) * 10.0
-    W = np.random.rand(20, 100) * 10.0
 
     Y = np.matmul(X, W)
     with tf.variable_scope(name, "Reader-Npy"):
@@ -40,7 +41,6 @@ def read_from_generator(num_epochs, batch_size, name=None):
 
     num_examples = 1000
     X = np.random.rand(num_examples, 20) * 10.0
-    W = np.random.rand(20, 100) * 10.0
 
     Y = np.matmul(X, W)
 
