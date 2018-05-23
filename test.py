@@ -6,7 +6,7 @@ from reader import read_from_numpy, read_from_generator
 from model import LrModel
 import utils
 
-utils.set_best_gpu()
+utils.set_best_gpu(1)
 utils.set_seed(1234)
 
 
@@ -19,8 +19,10 @@ def run_epoch(sess, model, iterations):
 
 
 def main1(_):
-    # another choice to restore the model without re-creating it
-    sess = tf.Session()
+    # another choice to restore the model without re-creating it.
+    # should be noted that if we enable multi gpus training,
+    # we must enable `allow_soft_placement` to restore the model properly.
+    sess = tf.Session(config=utils.gen_session_config(allow_soft_placement=True))
     saver = tf.train.import_meta_graph("./save/model.ckpt.meta")
     saver.restore(sess, tf.train.latest_checkpoint("./save/"))
 

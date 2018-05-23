@@ -10,6 +10,7 @@ class Average(object):
     """
     Full Average without saving.
     """
+
     def __init__(self):
         super().__init__()
         self._val = 0.0
@@ -60,6 +61,74 @@ class MovingMean(object):
 
     def __str__(self):
         return str(self._val)
+
+
+def _average_gradients(tower_grads):
+    average_grads = []
+    for grad_and_vars in zip(*tower_grads):
+        # Note that each grad_and_vars looks like the following:
+        #   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
+        grads = []
+        for g, _ in grad_and_vars:
+            # Add 0 dimension to the gradients to represent the tower.
+            expanded_g = tf.expand_dims(g, 0)
+
+            # Append on a 'tower' dimension which we will average over below.
+            grads.append(expanded_g)
+
+        # Average over the 'tower' dimension.
+        grad = tf.concat(axis=0, values=grads)
+        grad = tf.reduce_mean(grad, 0)
+
+        # Keep in mind that the Variables are redundant because they are shared
+        # across towers. So .. we will just return the first tower's pointer to
+        # the Variable.
+        v = grad_and_vars[0][1]
+        grad_and_var = (grad, v)
+        average_grads.append(grad_and_var)
+    return average_grads
+
+
+def parallel(X, Y, num_gpus, optimizer, build_model_func):
+    """
+
+    Parameters
+    ----------
+    X
+    Y
+    num_gpus
+    optimizer
+    build_model_func:
+    a function like `func(x, y)`. used to create model in each gpus
+
+    Returns
+    -------
+    loss_op, train_op
+
+    """
+    Xs = tf.split(X, num_gpus)
+    Ys = tf.split(Y, num_gpus)
+
+    tower_grads = []
+    tower_loss = []
+    for d in range(num_gpus):
+        with tf.device('/gpu:%s' % d):
+            with tf.name_scope('%s_%s' % ('tower', d)):
+                model = build_model_func(Xs[d], Ys[d])
+                with tf.variable_scope("loss"):
+                    grads = optimizer.compute_gradients(model.loss)
+                    tower_grads.append(grads)
+                    tower_loss.append(model.loss)
+                    tf.get_variable_scope().reuse_variables()
+                tf.get_variable_scope().reuse_variables()
+
+    mean_loss = tf.stack(axis=0, values=tower_loss)
+    mean_loss = tf.reduce_mean(mean_loss, axis=0)
+    mean_grads = _average_gradients(tower_grads)
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(update_ops):
+        train_op = optimizer.apply_gradients(mean_grads, global_step=tf.train.get_or_create_global_step())
+    return mean_loss, train_op
 
 
 def check_or_create(path):

@@ -9,3 +9,6 @@ lr_decay = 0.5  # decay to 1/2
 epochs = 100
 batch_size = 32
 seed = 1234
+
+# setting for gpus
+num_gpus = 2
