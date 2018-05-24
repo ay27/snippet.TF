@@ -63,6 +63,69 @@ class MovingMean(object):
         return str(self._val)
 
 
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
+def get_valid_save_path(save_path, prefix=None):
+    ii = 0
+    if prefix:
+        tmp = os.path.join(save_path, prefix)
+    else:
+        tmp = save_path
+    while True:
+        if os.path.exists('%s-%d' % (tmp, ii)):
+            ii += 1
+        else:
+            res = '%s-%d' % (tmp, ii)
+            os.mkdir(res)
+            print('mkdir ', res)
+            break
+    return res
+
+
+class Schedule(object):
+    def __init__(self):
+        self.interval_step = 0
+        self.tasks = []
+        self.interval = []
+
+    def add(self, task_func, interval):
+        self.tasks.append(task_func)
+        self.interval.append(interval)
+        return self
+
+    def ticktock(self):
+        self.interval_step += 1
+        for t, val in zip(self.tasks, self.interval):
+            if (isinstance(val, list) and self.interval_step in val) \
+                    or (self.interval_step % val == 0):
+                t()
+
+
+class DecayVariable(tf.Variable):
+    def __init__(self, init_value, name):
+        super().__init__(init_value, trainable=False, name=name)
+        self._value = init_value
+        self._new_value = tf.placeholder(tf.float32, shape=[], name="new_%s" % name)
+        self._assign_op = tf.assign(self, self._new_value)
+
+    @property
+    def data(self):
+        return self._value
+
+    def decay(self, sess, decay_rate):
+        self._value = self._value * decay_rate
+        sess.run(self._assign_op, feed_dict={self._new_value: self._value})
+
+    def set(self, sess, value):
+        self._value = value
+        sess.run(self._assign_op, feed_dict={self._new_value: self._value})
+
+
 def _average_gradients(tower_grads):
     average_grads = []
     for grad_and_vars in zip(*tower_grads):
