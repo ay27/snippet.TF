@@ -6,7 +6,7 @@ import time
 import tensorflow as tf
 import numpy as np
 import utils
-from logger import Logger, CSVLogger
+from logger import Logger, CsvLogger
 from reader import read_from_numpy
 from model import LrModel
 import os
@@ -62,7 +62,7 @@ def main(_):
     test_model = LrModel(test_X, test_Y, is_training=False, reuse=True)
 
     logger = Logger(FLAGS.log_path)
-    csv_logger = CSVLogger(os.path.join(FLAGS.log_path, "log.csv"), ["epoch", "Lr", "Train Loss", "Valid Loss"])
+    csv_logger = CsvLogger(os.path.join(FLAGS.log_path, "log.csv"), ["epoch", "Lr", "Train Loss", "Valid Loss"])
 
     with tf.device("/cpu:0"):
         saver = tf.train.Saver()

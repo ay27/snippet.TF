@@ -1,18 +1,46 @@
 # Code referenced from https://gist.github.com/gyglim/1f8dfb1b5c82627ae3efcfbbadb9f514
 import tensorflow as tf
+from tensorflow.contrib.tensorboard.plugins import projector
 import numpy as np
 import scipy.misc
 import os
 import csv
 import datetime
+
 try:
     from StringIO import StringIO  # Python 2.7
 except ImportError:
-    from io import BytesIO         # Python 3.x
+    from io import BytesIO  # Python 3.x
+
+
+def embedding_logger(tensor, save_path, meta_data=None):
+    embedding_var = tf.Variable(tensor)
+
+    os.makedirs(save_path, exist_ok=True)
+    meta_path = None
+    if meta_data:
+        meta_path = os.path.join(save_path, 'meta.csv')
+        with open(meta_path, 'w') as f:
+            for w in meta_data:
+                f.write(w)
+                f.write('\n')
+
+    with tf.Session() as sess:
+        writer = tf.summary.FileWriter(save_path, sess.graph)
+        sess.run(embedding_var.initializer)
+        config = projector.ProjectorConfig()
+        embedding = config.embeddings.add()
+        embedding.tensor_name = embedding_var.name
+        embedding.metadata_path = meta_path
+        projector.visualize_embeddings(writer, config)
+        saver_embed = tf.train.Saver([embedding_var])
+        saver_embed.save(sess, os.path.join(save_path, 'embedding.ckpt'), 1)
+
+    writer.close()
 
 
 class Logger(object):
-    
+
     def __init__(self, log_dir):
         """Create a summary writer logging to log_dir."""
         self.writer = tf.summary.FileWriter(log_dir)
@@ -44,7 +72,7 @@ class Logger(object):
         # Create and write Summary
         summary = tf.Summary(value=img_summaries)
         self.writer.add_summary(summary, step)
-        
+
     def histo_summary(self, tag, values, step, bins=1000):
         """Log a histogram of the tensor of values."""
 
@@ -57,7 +85,7 @@ class Logger(object):
         hist.max = float(np.max(values))
         hist.num = int(np.prod(values.shape))
         hist.sum = float(np.sum(values))
-        hist.sum_squares = float(np.sum(values**2))
+        hist.sum_squares = float(np.sum(values ** 2))
 
         # Drop the start of the first bin
         bin_edges = bin_edges[1:]
@@ -74,14 +102,14 @@ class Logger(object):
         self.writer.flush()
 
 
-class CSVLogger(object):
+class CsvLogger(object):
 
     def __init__(self, output_file, headers, append_time=False):
         if not os.path.exists(os.path.dirname(output_file)):
             os.mkdir(os.path.dirname(output_file))
         if append_time:
             time_now = datetime.datetime.now().strftime("d%d-H%H-M%M-S%S")
-            self._output_file = output_file+time_now
+            self._output_file = output_file + time_now
         else:
             self._output_file = output_file
         self._headers = headers

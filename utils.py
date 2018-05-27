@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Created by ay27 at 2018/4/8
+import sys
+import time
+
 import tensorflow as tf
 import os
 import numpy as np
@@ -12,7 +15,6 @@ class Average(object):
     """
 
     def __init__(self):
-        super().__init__()
         self._val = 0.0
         self._iter = 0
 
@@ -38,7 +40,6 @@ class MovingMean(object):
         N: int
             moving length
         """
-        super().__init__()
         self._N = N
         self._log = np.zeros(self._N, dtype=np.float32)
         self._idx = 0
@@ -68,6 +69,38 @@ class dotdict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+class ShowProcess(object):
+    i = 0
+    max_steps = 0
+    max_arrow = 50
+
+    def __init__(self, max_steps):
+        self.max_steps = max_steps
+        self.i = 0
+        self.start_ts = None
+
+    def show_process(self, i=None, msg=''):
+        if i is not None:
+            self.i = i
+        else:
+            self.i += 1
+        if self.start_ts is None:
+            self.start_ts = time.time()
+        num_arrow = int(self.i * self.max_arrow / self.max_steps)
+        num_line = self.max_arrow - num_arrow
+        percent = self.i * 100.0 / self.max_steps
+        process_bar = '[' + '>' * num_arrow + '-' * num_line + '] '\
+                      + '%.2f' % percent + '% | ' + '%.1fs | ' % (time.time() - self.start_ts) + msg + '\r'
+        sys.stdout.write(process_bar)
+        sys.stdout.flush()
+
+    def close(self, words=None):
+        if words:
+            print(words)
+        self.i = 0
+        self.start_ts = None
 
 
 def get_valid_save_path(save_path, prefix=None):
@@ -106,16 +139,33 @@ class Schedule(object):
                 t()
 
 
-class DecayVariable(tf.Variable):
-    def __init__(self, init_value, name):
-        super().__init__(init_value, trainable=False, name=name)
+class VariableContainer(object):
+    def __init__(self, init_value, dtype, name, reuse=False, scope=None):
+        with tf.variable_scope(scope, "VariableContainer", reuse=reuse):
+            self._var = tf.get_variable(name, dtype=dtype, initializer=tf.constant(init_value), trainable=False)
         self._value = init_value
-        self._new_value = tf.placeholder(tf.float32, shape=[], name="new_%s" % name)
-        self._assign_op = tf.assign(self, self._new_value)
+        self._new_value = tf.placeholder(dtype, shape=[], name="new_%s" % name)
+        self._assign_op = tf.assign(self._var, self._new_value)
 
     @property
     def data(self):
         return self._value
+
+    @property
+    def var(self):
+        return self._var
+
+    def __int__(self):
+        if isinstance(self._value, int):
+            return self._value
+        else:
+            raise TypeError
+
+    def __float__(self):
+        if isinstance(self._value, float):
+            return self._value
+        else:
+            raise TypeError
 
     def decay(self, sess, decay_rate):
         self._value = self._value * decay_rate
