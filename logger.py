@@ -105,7 +105,7 @@ class Logger(object):
 class CsvLogger(object):
 
     def __init__(self, output_file, headers, append_time=False):
-        if not os.path.exists(os.path.dirname(output_file)):
+        if len(os.path.dirname(output_file)) > 0 and not os.path.exists(os.path.dirname(output_file)):
             os.mkdir(os.path.dirname(output_file))
         if append_time:
             time_now = datetime.datetime.now().strftime("d%d-H%H-M%M-S%S")
